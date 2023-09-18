@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/cors"
@@ -21,10 +22,14 @@ func main() {
 	// Load the .env file
 	godotenv.Load(".env")
 	port := os.Getenv("PORT")
-	dbURL := os.Getenv("CONN")
 
 	if port == "" {
 		log.Fatal("PORT environment variable not set")
+	}
+
+	dbURL := os.Getenv("CONN")
+	if dbURL == "" {
+		log.Fatal("CONN environment variable is not set")
 	}
 	// Load the database url
 	db, err := sql.Open("postgres", dbURL)
@@ -70,6 +75,10 @@ func main() {
 		Addr:    ":" + port,
 		Handler: router,
 	}
+
+	const collectionConcurrency = 10
+	const collectionInterval = time.Minute
+	go startScraping(dbQueries, collectionConcurrency, collectionInterval)
 
 	log.Printf("Serving on port: %s\n", port)
 	log.Fatal(srv.ListenAndServe())
